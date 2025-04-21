@@ -1,21 +1,44 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Retail Segmentation</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Segmentation App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
-        h1 { color: #333; }
-        form { margin-top: 20px; }
-        input[type=file] { padding: 10px; }
-        button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
-        button:hover { background-color: #45a049; }
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 80px;
+            padding: 30px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .btn-primary {
+            width: 100%;
+        }
     </style>
 </head>
 <body>
-    <h1>Upload Retail Data for Segmentation</h1>
-    <form method="POST" enctype="multipart/form-data" action="/analyze">
-        <input type="file" name="file" required><br><br>
-        <button type="submit">Analyze</button>
+<div class="container col-md-6">
+    <h1 class="text-center">Customer Segmentation</h1>
+    <form action="/results" method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="file" class="form-label">Upload CSV File</label>
+            <input class="form-control" type="file" name="file" required>
+        </div>
+        <div class="mb-3">
+            <label for="clusters" class="form-label">Number of Clusters</label>
+            <input class="form-control" type="number" name="clusters" value="4" min="2" max="10" required>
+        </div>
+        <button class="btn btn-primary" type="submit">Segment Customers</button>
     </form>
+</div>
 </body>
 </html>

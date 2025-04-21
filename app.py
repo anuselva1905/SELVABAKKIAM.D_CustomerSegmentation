@@ -1,116 +1,82 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request
 import pandas as pd
-import os
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.cluster import KMeans, DBSCAN
-from sklearn.metrics import silhouette_score
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
 from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
-import uuid
-from mpl_toolkits.mplot3d import Axes3D
+from io import BytesIO
+import base64
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'uploads'
-PLOT_FOLDER = 'static/plots'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(PLOT_FOLDER, exist_ok=True)
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/analyze', methods=['POST'])
-def analyze():
+@app.route('/results', methods=['POST'])
+def results():
     file = request.files['file']
-    if file:
-        filepath = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(filepath)
+    if not file:
+        return "No file uploaded.", 400
 
-        df = pd.read_csv(filepath)
+    k = int(request.form.get("clusters", 4))
 
-        # Clean and prepare data
-        df = df.dropna(subset=['CustomerID'])
-        df = df[df['Quantity'] > 0]
-        df = df[df['InvoiceNo'].astype(str).str.match(r'^[0-9]{6}$')]
+    df = pd.read_csv(file)
 
-        # Aggregate
-        df_grouped = df.groupby('CustomerID').agg({
-            'InvoiceNo': 'nunique',
-            'Quantity': 'sum',
-            'UnitPrice': 'mean'
-        }).reset_index()
+    df.dropna(subset=['CustomerID'], inplace=True)
+    df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'])
+    df['TotalPrice'] = df['Quantity'] * df['UnitPrice']
 
-        # Normalize
-        scaler = StandardScaler()
-        scaled = scaler.fit_transform(df_grouped.iloc[:, 1:])
+    snapshot_date = df['InvoiceDate'].max()
+    rfm = df.groupby('CustomerID').agg({
+        'InvoiceDate': lambda x: (snapshot_date - x.max()).days,
+        'InvoiceNo': 'nunique',
+        'TotalPrice': 'sum'
+    })
+    rfm.columns = ['Recency', 'Frequency', 'Revenue']
 
-        # Elbow method
-        distortions = []
-        for k in range(1, 10):
-            kmeans = KMeans(n_clusters=k, random_state=42)
-            kmeans.fit(scaled)
-            distortions.append(kmeans.inertia_)
-        elbow_path = os.path.join(PLOT_FOLDER, f'elbow_{uuid.uuid4()}.png')
-        plt.figure()
-        plt.plot(range(1, 10), distortions, marker='o')
-        plt.title('Elbow Method For Optimal k')
-        plt.xlabel('Number of clusters')
-        plt.ylabel('Inertia')
-        plt.savefig(elbow_path)
-        plt.close()
+    scaler = StandardScaler()
+    rfm_scaled = scaler.fit_transform(rfm)
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    rfm['Cluster'] = kmeans.fit_predict(rfm_scaled)
 
-        # PCA for 2D and 3D
-        pca_2d = PCA(n_components=2)
-        reduced_2d = pca_2d.fit_transform(scaled)
+    output_csv = BytesIO()
+    rfm.to_csv(output_csv)
+    output_csv.seek(0)
+    encoded_csv = base64.b64encode(output_csv.read()).decode('utf-8')
 
-        pca_3d = PCA(n_components=3)
-        reduced_3d = pca_3d.fit_transform(scaled)
+    fig1 = px.histogram(rfm, x='Recency', nbins=10, title='Histogram of Recency', color_discrete_sequence=['dodgerblue'])
+    fig1.update_layout(margin=dict(l=20, r=20, t=40, b=20))
 
-        # KMeans
-        kmeans = KMeans(n_clusters=4, random_state=42)
-        df_grouped['Cluster'] = kmeans.fit_predict(scaled)
+    fig2 = px.scatter(rfm, x='Recency', y='Revenue', color=rfm['Cluster'].astype(str), title='Scatter plot of scores for Recency')
+    fig2.update_layout(margin=dict(l=20, r=20, t=40, b=20))
 
-        # 2D Cluster Plot
-        cluster_path = os.path.join(PLOT_FOLDER, f'cluster_{uuid.uuid4()}.png')
-        plt.figure(figsize=(8, 6))
-        sns.scatterplot(x=reduced_2d[:, 0], y=reduced_2d[:, 1], hue=df_grouped['Cluster'], palette='Set2')
-        plt.title('Customer Segments (2D PCA)')
-        plt.savefig(cluster_path)
-        plt.close()
+    corr_matrix = rfm.drop('Cluster', axis=1).corr().round(2)
+    fig3 = go.Figure(data=go.Heatmap(
+        z=corr_matrix.values,
+        x=corr_matrix.columns,
+        y=corr_matrix.index,
+        colorscale='Blues',
+        showscale=True
+    ))
+    fig3.update_layout(title='Feature Correlation Heatmap', margin=dict(l=20, r=20, t=40, b=20))
 
-        # 3D Cluster Plot
-        fig = plt.figure(figsize=(10, 8))
-        ax = fig.add_subplot(111, projection='3d')
-        scatter = ax.scatter(reduced_3d[:, 0], reduced_3d[:, 1], reduced_3d[:, 2], c=df_grouped['Cluster'], cmap='Set2')
-        ax.set_title('Customer Segments (3D PCA)')
-        ax.set_xlabel('PC1')
-        ax.set_ylabel('PC2')
-        ax.set_zlabel('PC3')
-        plot_3d_path = os.path.join(PLOT_FOLDER, f'3dplot_{uuid.uuid4()}.png')
-        plt.savefig(plot_3d_path)
-        plt.close()
+    pca = PCA(n_components=3)
+    pca.fit(rfm_scaled)
+    importance = pd.Series(pca.components_[0], index=rfm.columns[:-1])
+    fig4 = px.bar(importance.sort_values(), orientation='h', title='Feature Importance', color=importance.sort_values(), color_continuous_scale='Viridis')
+    fig4.update_layout(margin=dict(l=20, r=20, t=40, b=20), coloraxis_showscale=False)
 
-        # Violin Plot
-        violin_path = os.path.join(PLOT_FOLDER, f'violin_{uuid.uuid4()}.png')
-        plt.figure(figsize=(10, 6))
-        melted = pd.melt(df_grouped, id_vars='Cluster', value_vars=['InvoiceNo', 'Quantity', 'UnitPrice'])
-        sns.violinplot(x='variable', y='value', hue='Cluster', data=melted, palette='Set2', split=True)
-        plt.title('Distribution of Features by Cluster')
-        plt.savefig(violin_path)
-        plt.close()
-
-        # Silhouette Score
-        silhouette = silhouette_score(scaled, df_grouped['Cluster'])
-
-        return render_template('result.html', 
-                               image_file=cluster_path,
-                               elbow_plot=elbow_path,
-                               plot3d=plot_3d_path,
-                               violin_plot=violin_path,
-                               silhouette_score=round(silhouette, 3))
-
-    return redirect(url_for('index'))
+    return render_template(
+        'result.html',
+        img1=fig1.to_json(),
+        img2=fig2.to_json(),
+        img3=fig3.to_json(),
+        img4=fig4.to_json(),
+        csv_data=encoded_csv
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)

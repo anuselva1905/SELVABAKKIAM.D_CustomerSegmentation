@@ -2,70 +2,78 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Clustering Results</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Segmentation Results</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body {
-            background-color: #f8f9fa;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f5f7fa;
+            margin: 0;
+            padding: 30px;
         }
-        .plot-img {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #333;
         }
-        .plot-title {
-            margin-top: 10px;
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 40px;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        .download {
+            text-align: center;
+            margin-top: 40px;
+        }
+        .download a {
+            padding: 12px 25px;
+            background-color: #007bff;
+            color: white;
             font-weight: bold;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+        .download a:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
 <body>
-
-<div class="container py-5">
-    <h2 class="text-center mb-5">Customer Segmentation Analysis</h2>
-
-    <!-- Silhouette Score -->
-    <div class="row justify-content-center mb-4">
-        <div class="col-md-6">
-            <div class="card text-center shadow">
-                <div class="card-body">
-                    <h5 class="card-title">Silhouette Score</h5>
-                    <p class="display-6">{{ silhouette_score }}</p>
-                    <small class="text-muted">Higher score indicates better cluster separation</small>
-                </div>
-            </div>
+    <h1>Segmentation Results</h1>
+    <div class="grid">
+        <div class="chart-container">
+            <div id="plot1"></div>
+        </div>
+        <div class="chart-container">
+            <div id="plot2"></div>
+        </div>
+        <div class="chart-container">
+            <div id="plot3"></div>
+        </div>
+        <div class="chart-container">
+            <div id="plot4"></div>
         </div>
     </div>
-
-    <!-- First row of plots -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <img src="{{ elbow_plot }}" class="plot-img" alt="Elbow Plot">
-            <p class="text-center plot-title">Elbow Curve for Optimal Clusters</p>
-        </div>
-        <div class="col-md-6">
-            <img src="{{ image_file }}" class="plot-img" alt="2D Cluster Plot">
-            <p class="text-center plot-title">2D PCA Cluster Visualization</p>
-        </div>
+    <div class="download">
+        <a href="data:text/csv;base64,{{ csv_data }}" download="segmented_customers.csv">Download Segmented CSV</a>
     </div>
 
-    <!-- Second row of plots -->
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <img src="{{ plot3d }}" class="plot-img" alt="3D Cluster Plot">
-            <p class="text-center plot-title">3D PCA Cluster Visualization</p>
-        </div>
-        <div class="col-md-6">
-            <img src="{{ violin_plot }}" class="plot-img" alt="Violin Plot">
-            <p class="text-center plot-title">Violin Plot of Feature Distribution</p>
-        </div>
-    </div>
+    <script>
+        var plot1 = {{ img1 | safe }};
+        var plot2 = {{ img2 | safe }};
+        var plot3 = {{ img3 | safe }};
+        var plot4 = {{ img4 | safe }};
 
-    <div class="text-center mt-5">
-        <a href="/" class="btn btn-primary">Try Another File</a>
-    </div>
-</div>
-
+        Plotly.newPlot('plot1', plot1.data, plot1.layout);
+        Plotly.newPlot('plot2', plot2.data, plot2.layout);
+        Plotly.newPlot('plot3', plot3.data, plot3.layout);
+        Plotly.newPlot('plot4', plot4.data, plot4.layout);
+    </script>
 </body>
 </html>

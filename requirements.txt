@@ -3,6 +3,7 @@ matplotlib
 seaborn
 scikit-learn
 openpyxl
+plotly
 Flask==2.1.0
 Werkzeug==2.0.3
 Jinja2==3.0.3
