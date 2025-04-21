@@ -1,6 +1,9 @@
-from flask import render_template
-from app import app
+from flask import render_template,Blueprint
 
-@app.route('/')
-def home():
-    return render_template('index.html')  # Shows the upload page
+
+home = Blueprint('home', __name__)
+
+@home.route('/')
+def index():
+    from app import app  # Lazy import inside the function
+    return render_template('home.html')
