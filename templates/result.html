@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Segmentation Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --accent: #4895ef;
+            --dark: #1b263b;
+            --light: #f8f9fa;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .dashboard-header {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .metric-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        .cluster-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+        .cluster-header {
+            padding: 1rem;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Dashboard Header -->
+        <div class="dashboard-header">
+            <h1><i class="fas fa-users me-2"></i>Customer Segmentation Dashboard</h1>
+            <p class="text-muted">Analyzing {{ total_customers }} customers</p>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <h5><i class="fas fa-users text-primary me-2"></i>Total Customers</h5>
+                    <h2>{{ total_customers }}</h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <h5><i class="fas fa-project-diagram text-success me-2"></i>Segments</h5>
+                    <h2>{{ cluster_count }}</h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <h5><i class="fas fa-star text-warning me-2"></i>High Value</h5>
+                    <h2>{{ (clusters[0].size/total_customers*100)|round(1) }}%</h2>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <h5><i class="fas fa-chart-line text-danger me-2"></i>Growth Potential</h5>
+                    <h2>{{ (clusters[2].size/total_customers*100)|round(1) }}%</h2>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h4><i class="fas fa-chart-pie me-2"></i>Segment Distribution</h4>
+                    <canvas id="segmentChart"></canvas>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="chart-container">
+                    <h4><i class="fas fa-chart-bar me-2"></i>RFM Analysis</h4>
+                    <canvas id="rfmChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Segment Cards -->
+        <div class="row">
+            <div class="col-12">
+                <h3 class="my-3"><i class="fas fa-id-card me-2"></i>Customer Segments</h3>
+            </div>
+            {% for cluster in clusters %}
+            <div class="col-md-4">
+                <div class="cluster-card">
+                    <div class="cluster-header" style="background-color: {{ cluster.color }};">
+                        <h4 class="m-0">{{ cluster.id }}</h4>
+                    </div>
+                    <div class="p-3">
+                        <p>{{ cluster.description }}</p>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Customers:</span>
+                            <strong>{{ cluster.size }} ({{ (cluster.size/total_customers*100)|round(1) }}%)</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Avg Recency:</span>
+                            <strong>{{ cluster.avg_recency }} days</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Avg Frequency:</span>
+                            <strong>{{ cluster.avg_frequency }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Avg Spending:</span>
+                            <strong>${{ cluster.avg_monetary|round(2) }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Customer Table -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="chart-container">
+                    <h4><i class="fas fa-table me-2"></i>Customer Data Sample</h4>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Customer ID</th>
+                                    <th>Segment</th>
+                                    <th>Recency</th>
+                                    <th>Frequency</th>
+                                    <th>Monetary</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for customer in customers %}
+                                <tr>
+                                    <td>{{ customer.CustomerID }}</td>
+                                    <td><span class="badge" style="background-color: {{ segment_colors[customer.Segment] }}">{{ customer.Segment }}</span></td>
+                                    <td>{{ customer.Recency }} days</td>
+                                    <td>{{ customer.Frequency }}</td>
+                                    <td>${{ customer.MonetaryValue|round(2) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Segment Distribution Chart
+        const segmentCtx = document.getElementById('segmentChart').getContext('2d');
+        const segmentChart = new Chart(segmentCtx, {
+            type: 'doughnut',
+            data: {
+                labels: JSON.parse('{{ cluster_labels|tojson }}'),
+                datasets: [{
+                    data: JSON.parse('{{ cluster_sizes|tojson }}'),
+                    backgroundColor: JSON.parse('{{ cluster_colors|tojson }}'),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+    
+        // RFM Radar Chart
+        const rfmCtx = document.getElementById('rfmChart').getContext('2d');
+        const rfmChart = new Chart(rfmCtx, {
+            type: 'radar',
+            data: {
+                labels: ['Recency', 'Frequency', 'Monetary'],
+                datasets: JSON.parse('{{ radar_data|tojson }}').map(segment => ({
+                    label: segment.id,
+                    data: segment.values,
+                    backgroundColor: segment.color.replace(")", ", 0.2)"),
+                    borderColor: segment.color,
+                    pointBackgroundColor: segment.color,
+                    pointRadius: 4
+                }))
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    r: {
+                        angleLines: {
+                            display: true
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 100
+                    }
+                }
+            }
+        });
+    </script>
+</html>    
+    
