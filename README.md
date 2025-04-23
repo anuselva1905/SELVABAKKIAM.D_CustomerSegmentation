@@ -45,10 +45,9 @@ Make sure you have the following installed:
 
 
 ### Notes:
-1. **Dependencies**: I added `pandas`, `numpy`, `matplotlib`, `seaborn`, `sklearn`, `flask`, and `chart.js` based on the common libraries used for this kind of project. Make sure you add any additional libraries that your project uses in the `requirements.txt`.
-2. **Usage Section**: Tailor the instructions for running your segmentation model, including any necessary datasets or configurations.
-3. **Visualizations**: Explain how to view the charts and where to look for the results.
+1. **Dependencies**: I added `pandas`, `numpy`, `matplotlib`, `seaborn`, `sklearn`, `flask`, and `chart.js` based on the common libraries used for this kind of project. 
+2. **Visualizations**: Explain how to view the charts and where to look for the results.
 
-If you'd like specific instructions for your repository, let me know more details about how it's set up (like if it's a Flask app, how the data is structured, etc.), and I can help refine this!
+
 
 
